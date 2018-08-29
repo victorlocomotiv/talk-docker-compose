@@ -1,0 +1,132 @@
+/**
+ * Default theme for reveal.js.
+ *
+ * Copyright (C) 2011-2012 Hakim El Hattab, http://hakim.se
+ */
+
+
+
+
+// Default mixins and settings -----------------
+@import "../template/mixins";
+@import "../template/settings";
+// ---------------------------------------------
+
+$backgroundColor: #7e0000;
+
+// Links and actions
+$linkColor: #ff7e00;
+$linkColorHover: lighten( $linkColor, 20% );
+$navColor: #ff0000;
+$navColorHover: lighten( $navColor, 20% );
+
+// Include theme-specific fonts
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../../font/quicksand-regular.eot');
+  src: url('../../font/quicksand-regular.eot?#iefix') format('embedded-opentype'),
+       url('../../font/quicksand-regular.woff') format('woff'),
+       url('../../font/quicksand-regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 700;
+  src: url('../../font/quicksand-bold.eot');
+  src: url('../../font/quicksand-bold.eot?#iefix') format('embedded-opentype'),
+       url('../../font/quicksand-bold.woff') format('woff'),
+       url('../../font/quicksand-bold.ttf') format('truetype');
+}
+
+@import url(https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic);
+
+// Override theme settings (see ../template/settings.scss)
+$heading1TextShadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0,0,0,.1), 0 0 5px rgba(0,0,0,.1), 0 1px 3px rgba(0,0,0,.3), 0 3px 5px rgba(0,0,0,.2), 0 5px 10px rgba(0,0,0,.25), 0 20px 20px rgba(0,0,0,.15);
+
+// Background generator
+@mixin bodyBackground() {
+	@include radial-gradient( rgba(220,21,15,1), rgba(176,17,18,1) );
+}
+
+
+
+// Theme template ------------------------------
+@import "../template/theme";
+// ---------------------------------------------
+
+
+
+.reveal.center {
+  background: #b60000;
+  background: -moz-radial-gradient(center, circle cover, #b60000 0%, #7e0000 100%);
+  background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%, #b60000), color-stop(100%, #7e0000));
+  background: -webkit-radial-gradient(center, circle cover, #b60000 0%, #7e0000 100%);
+  background: -o-radial-gradient(center, circle cover, #b60000 0%, #7e0000 100%);
+  background: -ms-radial-gradient(center, circle cover, #b60000 0%, #7e0000 100%);
+  background: radial-gradient(center, circle cover, #b60000 0%, #7e0000 100%);
+  background-color: #7e0000;
+
+  .slides {
+    section {
+      height: 100%;
+      min-height: 100%;
+      padding: 10px 0 15px 0;
+
+      img.logo {
+        max-height: 250px;
+      }
+
+      img.slide_img {
+        max-height: 350px;
+      }
+
+      p {
+        font-size: 32px;
+      }
+
+      em {
+        color: #f90 !important;
+        font-style: normal;
+      }
+
+      div.footer {
+        position: absolute;
+        width: 800px;
+        z-index: 999;
+        left: 0;
+        bottom: 46px;
+        color: #ccc;
+        height: 46px;
+        text-align: left;
+        margin-bottom: 0px;
+
+        * {
+          font-size: 24px;
+          text-align: left;
+        }
+
+        hr {
+          margin: 5px 0;
+        }
+      }
+
+      img.img-logo {
+        position: absolute;
+        max-height: none;
+        max-width: none;
+        width: 140px;
+        height: 60px;
+        z-index: 999;
+        right: 0;
+        bottom: 30px;
+        margin: 0px;
+        background: none;
+        box-shadow: none;
+        border: 0;
+        margin-bottom: 0;
+      }
+    }
+  }
+}
