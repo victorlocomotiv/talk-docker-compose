@@ -4640,7 +4640,7 @@ Reveal.addEventListener('ready', function() {
   'use strict';
 
   var footer = TEMPLATES.footer({
-    title: 'DevOps SKY - Docker Swarm'
+    title: 'Docker Compose'
   });
 
   var sectionEls = document.querySelectorAll('section:not(.stack)');

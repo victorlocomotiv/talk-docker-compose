@@ -2,27 +2,34 @@
 
 WARNING!! DON'T EDIT THE FILE README.md on the root of the project, that one is a GENERATED FILE!
 
-You should just edit the source file at src/README.md - the one which stars with ## DevOps SKY - Docker Swarm
+You should just edit the source file at src/README.md - the one which stars with ## Docker Compose
 
 -->
 
-## DevOps SKY - Docker Swarm
+## Docker Compose
 
 <!-- <img src="img/AngularJS-large.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" /> -->
 
 &nbsp;
-&nbsp;
-
-DevOps SKY
 
 &nbsp;
+
+Victor Mauricio Gomes
+<br>
+[victor.gomes@terceiro-sky.com.br](mailto:victor.gomes@terceiro-sky.com.br)
+<br>
+<br>
+DevOps
+
+&nbsp;
+
 &nbsp;
 
 <!-- Victor Mauricio Gomes
 
-*victor.gomes@terceiro-sky.com.br* -->
+*locomotiv.file@gmail.com* -->
 
-29 de maio de 2018
+29 de agosto de 2018
 
 ---
 
@@ -31,33 +38,15 @@ DevOps SKY
  - Porque Docker Containers?
   - Imagens oficiais Java, Node, Mysql, Mongodb etc.
   - Imagens Customizadas (Dockerfile)
- - Oque é o Docker Swarm
-  - Oque é um Cluster
-  - Como funciona o Docker Swarm
-  - Setup - AWS Auto Scaling do Cluster de Worker
- - Monitoramento
-  - Swarm Visualizer - Manager e Workers
-  - Prometheus - Query de logs
-  - Grafana - Monitorando Clusters e Containers
-
-
-----
-
- - Orquestrando os Containers e Microserviços
-  - Escalando Containers de Serviços
-  - Load Balancer
-  - BlueGreen FallBack
-  - Reservando e limitando, CPU e RAM por container
- - Deploy CI CD com Jenkins
-  - Construindo os Containers
-  - Repositório de Containers (AWS ECR)
- - Orquestrando os Ambientes
-  - Desenvolvimento
-  - Teste (dev)
-  - Homologação (hml)
-  - Produção (prd)
- - Dúvidas
-
+ - Docker Compose versões 1, 2 e 3
+ - Arquitetura Multi-Container na Prática
+- Executando o Docker-Compose
+- Escalando os Containers
+- Oque é o Docker Swarm
+ - Oque é um Cluster
+ - Como funciona o Docker Swarm
+- Mais material
+- Dúvidas?
 
 ---
 
@@ -89,37 +78,311 @@ Os Containers podem ter qualquer outra distribuição de linux, apesar de usar o
 #### Imagens Customizadas (Dockerfile)
  
 ```
-FROM node:9-alpine
+FROM ubuntu:16.10
 
-COPY ./ /var/www/app
+RUN apt-get update && apt-get install -y --allow-unauthenticated software-properties-common \
+    && apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0x5a16e7281be7a449 \
+    && add-apt-repository "deb http://dl.hhvm.com/ubuntu $(lsb_release -sc)-lts-3.18 main" \
+    && apt-get update \
+    && apt-get install -y --allow-unauthenticated hhvm hhvm-dev autoconf automake libtool wget
 
-RUN npm install pm2 -g
-RUN cd /var/www/app \
-	&& npm install
+RUN mkdir /etc/mongodb \
+    && cd /etc/mongodb \
+    && wget https://github.com/mongodb/mongo-hhvm-driver/releases/download/1.2.3/hhvm-mongodb-1.2.3.tgz && tar xvzf hhvm-mongodb-1.2.3.tgz && rm hhvm-mongodb-1.2.3.tgz \
+    && cd ./hhvm-mongodb-1.2.3/ \
+    && hphpize \
+    && cmake . \
+    && make configlib \
+    && make -j $(nproc) \
+    && make install
 
-WORKDIR /var/www/app
-CMD ["sh","production.sh"]
+RUN apt-get update && apt-get install -y curl \
+    && curl -sS https://getcomposer.org/installer -o composer-setup.php \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+RUN usermod -u 1000 www-data
+
+COPY php.ini /etc/hhvm
+COPY server.ini /etc/hhvm
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+EXPOSE 9000
+
+WORKDIR /var/www/site
+
+CMD ["hhvm", "--mode=server"]
 ```
 
+---
+
+## Docker Compose
+
+
+&nbsp;
+
+<img src="img/slide_docker_compose_logo.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
+
+&nbsp;
+&nbsp;
+
+Compose é uma ferramenta para definir e executar aplicações ***multi-container*** em Docker.
+
+---
+
+### Docker Compose versões 1, 2 e 3
+
+Na ***versão 1***, é declarado apenas os serviços, criando a conexão deles através do ***link*** e interligando os volumes com ***volumes_from***, exemplo:
 ```
-FROM alpine:3.6
-
-ENV NODE_VERSION 9.11.1
-
-RUN addgroup -g 1000 node \
-    && adduser -u 1000 -G node -s /bin/sh -D node \
-    && apk add --no-cache \
-        libstdc++ \
-...
-
+nginx:
+  build: ./nginx
+  ports:
+    - 80:80
+    - 443:443
+  links:
+    - phpfpm-site
+    - phpfpm-blog
+    - mongoexpress
+    - phpmyadmin
+  volumes_from:
+    - site
+    - volume-blog
+    - volume-cache
+  volumes:
+    - ./logs/nginx/:/var/log/nginx
+  restart: always
 ```
 
+----
+### Docker Compose versões 1, 2 e 3
+
+Na ***versão 2*** o Compose passa a ter uma declaração específica para ***networks*** e ***volumes***, além dos serviços ficarem abaixo do nó de ***services***.
+
 ```
-#!/bin/bash
-pm2-docker start pm2.json
+version: "2.2"
+
+networks:
+  proxy:
+  database:
+
+volumes:
+  uploads:
+  dbsql:
+  dbnosql:
+
+services:
 ```
 
-  
+----
+
+### Docker Compose versões 1, 2 e 3
+
+Na ***versão 3*** o Compose é dedicado a um ***stack*** de SWARM, só é permitido usar imagens de repositório. Parâmetros específicos foram adicionados para orquestar o ***deploy***, exemplo:
+
+```
+version: "3.6"
+
+services:
+  memcached:
+    image: memcached:1.5.9-alpine
+    networks:
+      - backend
+    ports:
+      - 11211
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+```
+
+---
+
+## Arquitetura Multi-Container na prática
+
+<img src="img/lego.jpg" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
+
+Vamos adicionar containers interligados, definir volumes de persistência e adicionar arquivos de configurações.
+
+----
+
+### docker-compose.yml
+Vamos preparar as ***networks*** para interligar os containers e definir os ***volumes*** de persistência de dados.
+
+```
+version: "2.2"
+
+networks:
+  proxy:
+  database:
+
+volumes:
+  uploads:
+  dbsql:
+  dbnosql:
+
+services:
+```
+
+Acessando a localização dos Volumes do Docker
+```
+$ screen ~/Library/Containers/com.docker.docker/Data/com.docker.driver.amd64-linux/tty
+$ cd /var/lib/docker/volumes
+```
+
+----
+
+Adicionando container ***MySQL***
+
+```
+  mysql:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    networks:
+      - database
+    volumes:
+      - "dbsql:/var/lib/mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: "example"
+      MYSQL_USER: "admin"
+      MYSQL_PASSWORD: "1234"
+    ports:
+      - "15307:3306"
+```
+
+----
+
+Adicionando container ***PhpMyAdmin***
+
+```
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    networks:
+      - database
+      - proxy
+    links:
+      - mysql:db
+    ports:
+      - 80
+    environment:
+      PMA_ARBITRARY: 1
+      MYSQL_USERNAME: root
+      MYSQL_ROOT_PASSWORD: "123456"
+```
+
+----
+
+Adicionando container Mongodb
+```
+  mongodb:
+    image: mongo
+    networks:
+      - database
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+```
+
+----
+
+Adicionando container MongoExpress
+```
+  mongoexpress:
+    image: mongo-express
+    networks:
+      - database
+      - proxy
+    ports:
+      - 8081
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: 'admin'
+      ME_CONFIG_BASICAUTH_PASSWORD: '1234'
+      ME_CONFIG_MONGODB_ADMINUSERNAME: 'root'
+      ME_CONFIG_MONGODB_ADMINPASSWORD: 'example'
+```
+
+----
+
+Adicionando container de ***NGINX***, com arquivos de configuração
+
+```
+  nginx:
+    build: ./nginx
+    networks:
+      - proxy
+    volumes:
+      - ./nginx/sites-enabled/:/etc/nginx/conf.d/
+      - ./www:/var/www
+      - ./logs/nginx:/var/log/nginx
+    ports:
+      - 80:80
+      - 443:443
+```
+
+---
+
+#### Executando o Docker-Compose
+
+Build
+
+```
+$ docker-compose build
+```
+
+Run
+```
+$ docker-compose up
+```
+
+Derrubando os containers
+```
+$ docker-compose kill
+```
+
+Run em modo Daemon (deixar rodando)
+```
+$ docker-compose up -d
+```
+
+Buildando e executando como daemon em um só comando:
+```
+$ docker-compose up -d --build
+```
+
+---
+
+### Escalando os Containers
+
+
+No docker-compose versão 1 e 2
+```
+workerjava:
+  image: openjdk-9
+  scale: 2
+```
+```
+$ docker-compose scale workerjava=2
+```
+
+No docker-compose versão 3 (SWARM)
+```
+workerjava:
+  image: openjdk-9
+  deploy:
+      replicas: 3
+      placement:
+        constraints: [node.role == worker]
+```
+```
+$ docker service scale stackname_workerjava=3
+```
 
 ---
 
@@ -149,394 +412,36 @@ O Docker Swarm é uma ferramenta nativa do Docker que permite a criação de clu
 
 Um container é executado por um dos nós de ***worker*** ou de ***manager***.
 
-----
-
-#### Setup - AWS Auto Scaling do Cluster de Worker
- 
- Quando a média de uso do CPU dos workers atingir 70%, adiciona mais um worker ao cluster.
- 
- ```
- /etc/systemd/system/docker-node-join.service
- ```
- 
- ```
- [Unit]
- Description=Docker Swarm Worker Node Cluster
- After=docker.service
- Requires=docker.service
- 
- [Service]
- RemainAfterExit=yes
- ExecStartPre=-/usr/bin/docker swarm leave --force
- ExecStart=/usr/bin/docker swarm join --token <SWARM-TOKEN> <IP-MANAGER>:2377
- ExecStop=/usr/bin/docker swarm leave --force
- 
- [Install]
- WantedBy=multi-user.target
- ````
- 
- ```
- $ systemctl status docker-node-join
- $ systemctl is-active docker-node-join.service
- $ systemctl is-enabled docker-node-join.service
- ```
-
 ---
 
-## Monitoramento
+## Mais material
 
-<img src="img/slide_monitoramento.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
+&nbsp;
+ - [Projeto](https://github.com/victorlocomotiv/dev-talk-docker-compose)
+ - Play With Docker &nbsp; - &nbsp;[labs.play-with-docker.com](https://labs.play-with-docker.com/)
+ - Locomotiv &nbsp; - &nbsp;[www.locomotiv.com.br](http://www.locomotiv.com.br/)
+ - [Docker Compose 3 Documentation](https://docs.docker.com/compose/compose-file/)
+ - [Docker Compose 2 Documentation](https://docs.docker.com/compose/compose-file/compose-file-v2/)
+ - [Docker Compose 1 Documentation](https://docs.docker.com/compose/compose-file/compose-file-v1/)
  
-
-----
-
-#### Swarm Visualizer - Manager e Workers
-
-<img src="img/slide_visualizer.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
-
-[Swarm Visualizer](http://dev-visualizer.skybr.digital)
-
-----
-
-#### Prometheus - Query de logs
-
-<img src="img/slide_prometheus.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
-
-[Prometheus](http://dev-prometheus.skybr.digital)
-
-----
-
-#### Grafana - Monitorando Clusters e Containers
-
-<img src="img/slide_grafana.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
-
-[Grafana](http://dev-grafana.skybr.digital)
- 
-
----
-
-## Orquestrando os Containers e Microserviços
-
-<img src="img/slide_docker_compose_logo.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
-
-O ***Docker Compose***, originalmente chamado de ***fig***, foi criado com o propósito de orquestrar a criação e administração de um conjunto de containers a partir do uso de um simples arquivo de configuração em formato ***YAML***
-
-----
-
-#### docker-compose.yml
-
-```
-version: "2"
-
-services:
-  dummy:
-    build:
-      context: .
-      dockerfile: Dockerfile.developer
-    volumes:
-      - ./:/var/www/app
-    working_dir: /var/www/app
-    ports:
-      - 80:8000
-    environment:
-      COLOR: "green"
-      NODE_ENV: "Developer"
-      TZ: "America/Sao_Paulo"
-    command: sh developer.sh
-```
-```
-### Para dar build na imagem do container
-$ docker-compose build
-### Para executar os containers (modo daemon)
-$ docker-compose up -d
-### Para matar os containers
-$ docker-compose kill
-```
-
-----
-   
-#### Escalando Containers de Serviços
-Escalando pelo docker-compose de deploy ***docker-deploy.yml***
-
-```
-### Atribuindo o número de réplicas a estratégia de deploy, no docker-deploy.yml
-version: "3.6"
-
-services:
-  blue-api:
-    image: 432914321234.dkr.ecr.sa-east-1.amazonaws.com/node-dummy:dev
-    depends_on:
-      - mongodb-digitalapi
-    networks:
-      - proxy
-      - backend
-    environment:
-      COLOR: "blue"
-      NODE_ENV: "production"
-      TZ: "America/Sao_Paulo"
-    command: "sh ./production.sh"
-    ports:
-      - 8000
-    deploy:
-      replicas: 3
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints: [node.role == worker]
-```
-
-Escalando pela linha de comando
-
-```
-$ docker service scale skyswarm_green-api=3
-```
-
-
-----
-
-#### Docker-compose e NGINX Load Balancer
-
-O ***docker-compose*** permite orquestrar como um container vai interagir com outro, atribuindo DNS com o nome dos serviços apontando o respectivo range de containers.
-
-```
-version: "3.6"
-networks:
-  proxy:
-  backend:
-services:
-  nginx-skydigital:
-    image: 432914321234.dkr.ecr.sa-east-1.amazonaws.com/nginx-digital:1.2.15
-    networks:
-      - proxy
-    ports:
-      - 80:80
-      - 443:443 
-  green-api:
-    image: 432914321234.dkr.ecr.sa-east-1.amazonaws.com/node-dummy:dev
-    networks:
-      - proxy
-      - backend
-    ports:
-      - 8000
-```
-
-----
-
-#### Docker-compose e NGINX BlueGreen FallBack
-
-Se a versão nova da api, chamada de ***blue*** responder com erro, executa na versão estável anterior, versão ***green***.
-
-```
-upstream upstream_green {
-    server green-api:8000 fail_timeout=5s max_fails=5;
-}
-upstream upstream_blue {
-    server blue-api:8000 fail_timeout=5s max_fails=5;
-}
-
-server {
-    listen 80;
-    
-    location / {
-            proxy_intercept_errors on;
-            error_page 401 403 404 405 408 444 500 501 502 503 504 505 511 = @fallback;
-            
-            proxy_pass http://upstream_blue;
-            
-    }
-    
-    location @fallback {
-        proxy_pass http://upstream_green;
-    }
-}
-```
-
-
-----
-
-#### Reservando e limitando, CPU e RAM por container
-
-Alguns sistemas são programados para executar suas tarefas o mais rápido possível e para isso irá utilizar toda memória e CPU disponível.
-
-&nbsp;
 &nbsp;
 
-Para resolver isso, no ***Docker Swarm*** podemos orquestrar os recursos através do ***Docker Compose***.
-
-```
-deploy:
-  resources:
-    limits:
-      cpus: '0.5'
-      memory: 50M
-    reservations:
-      cpus: '0.25'
-      memory: 20M
-```
-
-----
-   
-#### Escalando Containers de Serviços
-Escalando pelo docker-compose de deploy ***docker-deploy.yml***
-
-```
-### Atribuindo o número de réplicas a estratégia de deploy, no docker-deploy.yml
-version: "3.6"
-
-services:
-  blue-api:
-    image: 432914321234.dkr.ecr.sa-east-1.amazonaws.com/node-dummy:dev
-    depends_on:
-      - mongodb-digitalapi
-    networks:
-      - proxy
-      - backend
-    environment:
-      COLOR: "blue"
-      NODE_ENV: "production"
-      TZ: "America/Sao_Paulo"
-    command: "sh ./production.sh"
-    ports:
-      - 8000
-    deploy:
-      replicas: 3
-      restart_policy:
-        condition: on-failure
-      placement:
-        constraints: [node.role == worker]
-```
-
-Escalando pela linha de comando
-
-```
-$ docker service scale skyswarm_green-api=3
-```
-
-
----
-
-## Deploy CI CD com Jenkins
-
-<img src="img/slide_jenkins_ci_cd.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
-
-Usamos um hook ***post-receive*** do Bitbucket para chamar o ***Jenkins*** a cada ***git push***.
-
-&nbsp;
-&nbsp;
-
-O Jenkins por sua vez constrói as imagens dos containers versionadas e atualiza o Docker Swarm Manager.
-
-----
-
-#### Construindo os Containers
-
-Na pipeline do Jenkins, construimos os containers e adicionamos suas respectivas ***tag***
-
-```
-stage("docker-build") {
-    dir("/var/jenkins/app/source/$ECRREPO/") {
-        sh "docker build -t $ECRREPO:dev ."
-    }
-}
-```
-
-----
-
-#### Repositório de Containers (AWS ECR)
-
-O Jenkins da ***push*** dos containers taggeados para o repositório e containers, AWS ECR (ou outro, como Docker Hub).
-
-```
-stage("ecr-push") {
-    sh "eval \$(aws ecr get-login --no-include-email --region sa-east-1)"
-    sh "docker tag $ECRREPO:dev $ECRADDR/$ECRREPO:dev"
-    sh "docker push $ECRADDR/$ECRREPO:dev"
-}
-```
-
-Em seguida o Jenkins se conecta ao ***Swarm Manager*** e manda atualizar os respectivos containers.
-
-```
-node("swarm-manager-dev"){
-  stage("deploy update image") {
-      sh "eval \$(/home/ubuntu/.local/bin/aws ecr get-login --no-include-email --region sa-east-1)"
-      sh "docker service update --with-registry-auth --image $ECRADDR/$ECRREPO:dev skyswarm_blue-api"
-      sh "docker service update --with-registry-auth --image $ECRADDR/$ECRREPO:dev skyswarm_green-api"
-  }
-}
-```
-
-
----
-
-## Orquestrando os Ambientes
-<img src="img/slide_compose_swarm.png" class="slide_img" style="border: none; background-color: transparent; box-shadow: none;" />
-
-Usando o Docker Compose para orquestrar os Containers, tanto de desenvolvimento quanto para um cluster Docker Swarm
-
-----
-
-#### Desenvolvimento
-
-O ambiente é orquestrado através do ***docker-compose.yml***, para fazer o build do container ***Dockerfile*** e iniciar o ambiente.
-
-```
-$ docker-compose up -d --build
-```
-
-Esse ambiente de desenvolvimento pode e deve ser commitado junto com o projeto, mantendo todos desenvolvedores com um ambiente ***local*** igual, independentemente se a máquina de desenvolvimento é Windows, MacOSX ou Linux.
-
-----
-
-#### Testes (dev)
-
-Todo push da branch ***master*** faz com que o ***Jenkins*** faça o build do container, mande para o ***AWS ECR*** um container com a tag ***:dev***
-
-```
-$ git push origin master
-```
-
-Nesse processo o ***Jenkins*** também manda o comando para o ***Docker Swarm Manager*** para atualizar a imagem ***:dev***
-
-----
-
-#### Homologação (hml)
-
-Sempre que for adicionada uma tag de versão ao repositório do git, será gerada a imagem do container com a tag ***tag de versão*** e também atualizada a imagem ***:latest***
-
-```
-$ git push origin <tag_name>
-```
-
-Nesse processo o ***Jenkins*** também manda o comando para o ***Docker Swarm Manager*** para atualizar a imagem ***:latest***
-
-
-----
-
-#### Produção (prd)
-
-O Swarm de Produção é redundante em duas zonas, por ser orquestrado através de um projeto git, usamos o ***Jenkins*** e o ***Docker Compose*** para orquestrar o deploy com o ***Docker Swarm*** com ***zero downtime***.
-```
-version: "3.6"
-networks:
-  proxy:
-  backend:
-services:
-  green-api:
-    image: 432914321234.dkr.ecr.sa-east-1.amazonaws.com/node-dummy:1.25.2
-...
-  blue-api:
-    image: 432914321234.dkr.ecr.sa-east-1.amazonaws.com/node-dummy:1.24.16
-...
-```
-Sempre utilizando as ***tags de versão*** nas imagens, garantindo assim o Bluegreen Fallback.
 
 ---
 
 ## Dúvidas?
 
 &nbsp;
+
+Victor Mauricio Gomes
+<br/>
+[victor.gomes@terceiro-sky.com.br](mailto:victor.gomes@terceiro-sky.com.br)
+<br/>
+&nbsp;
+<br/>
+Devops TN Digital
+
 &nbsp;
 
-  
-DevOps SKY
+FIM
+
