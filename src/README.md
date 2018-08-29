@@ -417,7 +417,8 @@ Um container é executado por um dos nós de ***worker*** ou de ***manager***.
 ## Mais material
 
 &nbsp;
- - [Projeto](https://github.com/victorlocomotiv/dev-talk-docker-compose)
+
+ - Projeto Prático no [GITHUB](https://github.com/victorlocomotiv/dev-talk-docker-compose)
  - Play With Docker &nbsp; - &nbsp;[labs.play-with-docker.com](https://labs.play-with-docker.com/)
  - Locomotiv &nbsp; - &nbsp;[www.locomotiv.com.br](http://www.locomotiv.com.br/)
  - [Docker Compose 3 Documentation](https://docs.docker.com/compose/compose-file/)
